@@ -1,0 +1,10 @@
+
+spring:
+  application:
+    name: mc-gateway
+
+server:
+  port: 8888
+
+mcregistry:
+  servers: http://localhost:8484
