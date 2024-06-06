@@ -6,6 +6,7 @@ import com.maccoy.mcrpc.core.cluster.RoundLoadBalancer;
 import com.maccoy.mcrpc.core.meta.InstanceMeta;
 import com.maccoy.mcrpc.core.meta.ServiceMeta;
 import io.github.maccoycookies.mcgateway.DefaultGatewayPluginChain;
+import io.github.maccoycookies.mcgateway.GatewayFilter;
 import io.github.maccoycookies.mcgateway.GatewayPlugin;
 import io.github.maccoycookies.mcgateway.GatewayPluginChain;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,8 @@ public class GatewayWebHandler implements WebHandler {
     @Autowired
     List<GatewayPlugin> plugins;
 
-
+    @Autowired
+    List<GatewayFilter> filters;
 
     @Override
     public Mono<Void> handle(ServerWebExchange exchange) {
@@ -45,6 +47,10 @@ public class GatewayWebHandler implements WebHandler {
                     """;
             return exchange.getResponse()
                     .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(mockStr.getBytes())));
+        }
+
+        for (GatewayFilter filter : filters) {
+            filter.filter(exchange);
         }
 
         return new DefaultGatewayPluginChain(plugins).handle(exchange);
