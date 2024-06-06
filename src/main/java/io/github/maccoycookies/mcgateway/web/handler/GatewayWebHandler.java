@@ -5,7 +5,9 @@ import com.maccoy.mcrpc.core.api.RegisterCenter;
 import com.maccoy.mcrpc.core.cluster.RoundLoadBalancer;
 import com.maccoy.mcrpc.core.meta.InstanceMeta;
 import com.maccoy.mcrpc.core.meta.ServiceMeta;
+import io.github.maccoycookies.mcgateway.DefaultGatewayPluginChain;
 import io.github.maccoycookies.mcgateway.GatewayPlugin;
+import io.github.maccoycookies.mcgateway.GatewayPluginChain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,8 @@ public class GatewayWebHandler implements WebHandler {
     @Autowired
     List<GatewayPlugin> plugins;
 
+
+
     @Override
     public Mono<Void> handle(ServerWebExchange exchange) {
         System.out.println(" ===> Mc Gateway web handler ... ");
@@ -43,18 +47,19 @@ public class GatewayWebHandler implements WebHandler {
                     .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(mockStr.getBytes())));
         }
 
-        for (GatewayPlugin plugin : plugins) {
-            if (plugin.support(exchange)) {
-                return plugin.handle(exchange);
-            }
-        }
-        String mockStr = """
-                    {
-                        "result": "no supported plugin"
-                    }
-                    """;
-        return exchange.getResponse()
-                .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(mockStr.getBytes())));
+        return new DefaultGatewayPluginChain(plugins).handle(exchange);
+        // for (GatewayPlugin plugin : plugins) {
+        //     if (plugin.support(exchange)) {
+        //         return plugin.handle(exchange);
+        //     }
+        // }
+        // String mockStr = """
+        //             {
+        //                 "result": "no supported plugin"
+        //             }
+        //             """;
+        // return exchange.getResponse()
+        //         .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(mockStr.getBytes())));
     }
 
 }

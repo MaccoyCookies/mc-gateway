@@ -6,6 +6,7 @@ import com.maccoy.mcrpc.core.cluster.RoundLoadBalancer;
 import com.maccoy.mcrpc.core.meta.InstanceMeta;
 import com.maccoy.mcrpc.core.meta.ServiceMeta;
 import io.github.maccoycookies.mcgateway.AbstractGatewayPlugin;
+import io.github.maccoycookies.mcgateway.GatewayPluginChain;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.ResponseEntity;
@@ -42,7 +43,7 @@ public class McRpcPlugin extends AbstractGatewayPlugin {
     }
 
     @Override
-    public Mono<Void> doHandle(ServerWebExchange exchange) {
+    public Mono<Void> doHandle(ServerWebExchange exchange, GatewayPluginChain chain) {
         System.out.println("===> [McRpcPlugin] ... ");
         String service = exchange.getRequest().getPath().value().substring(PREFIX.length());
         // 1. 通过请求路径或者服务名
@@ -72,7 +73,8 @@ public class McRpcPlugin extends AbstractGatewayPlugin {
         exchange.getResponse().getHeaders().add("mc.gateway.version", "V1.0.0");
         exchange.getResponse().getHeaders().add("mc.gateway.plugin", getName());
         return body.flatMap(x -> exchange.getResponse()
-                .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(x.getBytes()))));
+                .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(x.getBytes()))))
+                .then(chain.handle(exchange));
 
     }
 }

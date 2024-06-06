@@ -1,6 +1,7 @@
 package io.github.maccoycookies.mcgateway.plugin;
 
 import io.github.maccoycookies.mcgateway.AbstractGatewayPlugin;
+import io.github.maccoycookies.mcgateway.GatewayPluginChain;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -30,7 +31,7 @@ public class DirectPlugin extends AbstractGatewayPlugin {
     }
 
     @Override
-    public Mono<Void> doHandle(ServerWebExchange exchange) {
+    public Mono<Void> doHandle(ServerWebExchange exchange, GatewayPluginChain chain) {
         System.out.println("===> [DirectPlugin] ... ");
         String backend = exchange.getRequest().getQueryParams().getFirst("backend");
         Flux<DataBuffer> requestBody = exchange.getRequest().getBody();
@@ -39,7 +40,8 @@ public class DirectPlugin extends AbstractGatewayPlugin {
         exchange.getResponse().getHeaders().add("mc.gateway.version", "V1.0.0");
         exchange.getResponse().getHeaders().add("mc.gateway.plugin", getName());
         if (backend == null || backend.isBlank()) {
-            return requestBody.flatMap(x -> exchange.getResponse().writeWith(Mono.just(x))).then();
+            return requestBody.flatMap(x -> exchange.getResponse().writeWith(Mono.just(x)))
+                    .then(chain.handle(exchange));
         }
         // 5. 通过webClient发送post请求
         WebClient client = WebClient.create(backend);
@@ -51,6 +53,7 @@ public class DirectPlugin extends AbstractGatewayPlugin {
         body.subscribe(source -> System.out.println("response: " + source));
         // 7. 组装响应报文
         return body.flatMap(x -> exchange.getResponse()
-                .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(x.getBytes()))));
+                .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(x.getBytes()))))
+                .then(chain.handle(exchange));
     }
 }
