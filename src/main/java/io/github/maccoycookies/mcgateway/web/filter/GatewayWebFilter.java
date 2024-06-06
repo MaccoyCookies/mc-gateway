@@ -1,4 +1,4 @@
-package io.github.maccoycookies.mcgateway;
+package io.github.maccoycookies.mcgateway.web.filter;
 
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;

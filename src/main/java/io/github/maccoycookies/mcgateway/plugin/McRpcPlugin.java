@@ -1,30 +1,30 @@
-package io.github.maccoycookies.mcgateway;
+package io.github.maccoycookies.mcgateway.plugin;
 
 import com.maccoy.mcrpc.core.api.LoadBalancer;
 import com.maccoy.mcrpc.core.api.RegisterCenter;
 import com.maccoy.mcrpc.core.cluster.RoundLoadBalancer;
 import com.maccoy.mcrpc.core.meta.InstanceMeta;
 import com.maccoy.mcrpc.core.meta.ServiceMeta;
+import io.github.maccoycookies.mcgateway.AbstractGatewayPlugin;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ServerWebExchange;
-import org.springframework.web.server.WebHandler;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
 
 /**
- * @author Maccoy
- * @date 2024/6/2 18:21
- * Description
+ * mc rpc gateway plugin.
  */
-@Component("gatewayWebHandler")
-public class GatewayWebHandler implements WebHandler {
+@Component("mcRpc")
+public class McRpcPlugin extends AbstractGatewayPlugin {
+
+    public static final String NAME = "mcRpc";
+    private static final String PREFIX = GATEWAY_PREFIX + "/" + NAME + "/";
 
     @Autowired
     private RegisterCenter registerCenter;
@@ -32,13 +32,19 @@ public class GatewayWebHandler implements WebHandler {
     LoadBalancer loadBalancer = new RoundLoadBalancer();
 
     @Override
-    public Mono<Void> handle(ServerWebExchange exchange) {
-        // return exchange.getResponse().writeWith(
-        //         Mono.just(exchange.getResponse().bufferFactory().wrap("hello world".getBytes()))
-        // );
-        // return Mono.empty();
-        System.out.println("===> Mc Gateway web handler ... ");
-        String service = exchange.getRequest().getPath().value().substring(4);
+    public String getName() {
+        return NAME;
+    }
+
+    @Override
+    public boolean doSupport(ServerWebExchange exchange) {
+        return exchange.getRequest().getPath().value().startsWith(PREFIX);
+    }
+
+    @Override
+    public Mono<Void> doHandle(ServerWebExchange exchange) {
+        System.out.println("===> [McRpcPlugin] ... ");
+        String service = exchange.getRequest().getPath().value().substring(PREFIX.length());
         // 1. 通过请求路径或者服务名
         ServiceMeta serviceMeta = new ServiceMeta();
         serviceMeta.setApp("app1");
@@ -64,9 +70,9 @@ public class GatewayWebHandler implements WebHandler {
 
         exchange.getResponse().getHeaders().add("Content-Type", "application/json");
         exchange.getResponse().getHeaders().add("mc.gateway.version", "V1.0.0");
+        exchange.getResponse().getHeaders().add("mc.gateway.plugin", getName());
         return body.flatMap(x -> exchange.getResponse()
                 .writeWith(Mono.just(exchange.getResponse().bufferFactory().wrap(x.getBytes()))));
 
     }
-
 }
